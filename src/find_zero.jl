@@ -16,21 +16,21 @@ abstract type AbstractSecant <: UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
 abstract type CallableFunction end
-struct DerivativeFree <: CallableFunction
-    f
+struct DerivativeFree{F} <: CallableFunction
+    f::F
 end
 (F::DerivativeFree)(x::Number) = F.f(x)
 
-struct FirstDerivative <: CallableFunction
-    f
-    fp
+struct FirstDerivative{F,D} <: CallableFunction
+    f::F
+    fp::D
 end
 (F::FirstDerivative)(x::Number) = F.f(x)
 
-struct SecondDerivative <: CallableFunction
-    f
-    fp
-    fpp
+struct SecondDerivative{F,D,H} <: CallableFunction
+    f::F
+    fp::D
+    fpp::H
 end
 (F::SecondDerivative)(x::Number) = F.f(x)
 
@@ -122,11 +122,16 @@ end
         
 
 ## basic container
-mutable struct UnivariateZeroProblem{T<:AbstractFloat}
-    fs
-    x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
-    bracket::Union{Vector{T}, Missing}
+mutable struct UnivariateZeroProblem{T<:AbstractFloat, F, XT <: Union{T, Tuple{T,T}, Vector{T}, Complex{T}}, B <: Union{Vector{T}, Missing}}
+    fs::F
+    x0::XT
+    bracket::B
 end
+UnivariateZeroProblem(fs::F, x0::XT, bracket::Vector{T}) where {T,F,XT<:Union{T,Tuple{T,T},Vector{T},Complex{T}}} = UnivariateZeroProblem{T,F,XT,Vector{T}}(fs,x0,bracket)
+UnivariateZeroProblem(fs::F, x0::T, bracket::Missing) where {T<:AbstractFloat,F} = UnivariateZeroProblem{T,F,T,Missing}(fs,x0,bracket)
+UnivariateZeroProblem(fs::F, x0::Tuple{T,T}, bracket::Missing) where {T<:AbstractFloat,F} = UnivariateZeroProblem{T,F,Tuple{T,T},Missing}(fs,x0,bracket)
+UnivariateZeroProblem(fs::F, x0::Vector{T}, bracket::Missing) where {T<:AbstractFloat,F} = UnivariateZeroProblem{T,F,Vector{T},Missing}(fs,x0,bracket)
+UnivariateZeroProblem(fs::F, x0::Complex{T}, bracket::Missing) where {T<:AbstractFloat,F} = UnivariateZeroProblem{T,F,Complex{T},Missing}(fs,x0,bracket)
 
 ## frame the problem and the options
 function derivative_free_setup(method::Any, fs, x0::Union{T, Tuple{T,T}, Vector{T}};

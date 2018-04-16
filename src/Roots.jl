@@ -1,6 +1,7 @@
 __precompile__(true)
 module Roots
 
+using LinearAlgebra
 
 if VERSION >= v"0.7-"
     using Printf
@@ -156,7 +157,7 @@ graphically, if possible.
 function fzeros(f, a::Real, b::Real; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)
 end
-fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, a, b; kwargs...) 
+fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, bracket[1], bracket[2]; kwargs...) 
 
 
 

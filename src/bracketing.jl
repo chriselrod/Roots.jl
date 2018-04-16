@@ -529,7 +529,7 @@ end
 
 # floating point comparison function
 function almost_equal(x::T, y::T) where {T}
-    const min_diff = realmin(T)*32
+    min_diff = realmin(T)*32
     abs(x - y) < min_diff
 end
 
@@ -573,9 +573,12 @@ Examples
 find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
 ```
 """    
-mutable struct FalsePosition <: AbstractBisection
-    reduction_factor::Union{Int, Symbol}
-    FalsePosition(x=:anderson_bjork) = new(x)
+# mutable struct FalsePosition <: AbstractBisection
+#     reduction_factor::Union{Int, Symbol}
+#     FalsePosition(x=:anderson_bjork) = new(x)
+# end
+struct FalsePosition{R} <: AbstractBisection
+    FalsePosition(x=:anderson_bjork) = new{:anderson_bjork}()
 end
 
 function update_state(method::FalsePosition, fs, o, options)
@@ -604,7 +607,7 @@ function update_state(method::FalsePosition, fs, o, options)
     if sign(fx)*sign(fb) < 0
         a, fa = b, fb
     else
-        fa = galdino[method.reduction_factor](fa, fb, fx)
+        fa = reduction(method, fa, fb, fx)
     end
     b, fb = x, fx
 
@@ -616,7 +619,7 @@ function update_state(method::FalsePosition, fs, o, options)
 end
 
 # the 12 reduction factors offered by Galadino
-galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
+const galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :2 => (fa, fb, fx) -> (fa - fb)/2,
                                            :3 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb),
                                            :4 => (fa, fb, fx) -> (fa - fx)/(1 + fx/fb)^2,
@@ -632,6 +635,10 @@ galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
 # give common names
 for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
     galdino[nm] = galdino[i]
+end
+@generated function reduction(method::FalsePosition{R}, fa, fb, fx) where R
+    f = galdino[R]
+    :( $f(fa, fb, fx) )
 end
 
 function find_zero(f, x0::Tuple{T,S}, method::FalsePosition; kwargs...) where {T<:Real,S<:Real}
